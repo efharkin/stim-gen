@@ -50,7 +50,7 @@ class Stim(object):
     
     Attributes:
         
-        label           -- string descriptor of the class instance
+        label           -- string descriptor of the class instance.
         stim_type       -- string descriptor of the type of stimulus.
         dt              -- size of the time step in ms.
         command         -- 2D array containing stimuli; time across rows, sweeps across cols.
@@ -60,8 +60,8 @@ class Stim(object):
     
     Methods:
         
-        generate_PS         -- generate a synaptic current/potential-like waveform, with total amplitude defined
-        generate_PS_bycharge-- generates a synaptic current/potential-like waveform, with total charge defined
+        generate_PS         -- generate a synaptic current/potential-like waveform, with total amplitude defined.
+        generate_PS_bycharge-- generates a synaptic current/potential-like waveform, with total charge defined.
         generate_OU         -- generate Ornstein-Uhlenbeck noise.
         set_replicates      -- set the number of replicates of the stimulus.
         plot                -- plot the stimulus.
@@ -91,7 +91,9 @@ class Stim(object):
     ### MAGIC METHODS
     
     # Initialize class instance.
-    def __init__(self, label, dt = 0.1):
+    def __init__(self, label, dt=0.1):
+        
+        """Initialize self."""
         
         self.label      = label
         self.stim_type  = 'Empty'
@@ -106,36 +108,61 @@ class Stim(object):
     # Method for unambiguous representation of Stim instance.
     def __repr__(self):
         
-        if not self.time is None:
-            time_range  = '[' + str(self.time[0]) + ', ' + str(self.time[-1]) + ']'
+        """Return repr(self)."""
+        
+        if self.time is not None:
+            time_range = '[{}, {}]'.format(self.time[0], self.time[-1])
             command_str   = np.array2string(self.command)
         else:
             time_range  = str(self.time)
             command_str   = str(self.command)
         
-        return 'Stim object\n\nLabel: ' + self.label + '\nStim type: ' + self.stim_type + '\nTime range (ms): ' + time_range + '\nTime step (ms):' + str(self.dt) + '\nStim Parameters' + vars(self.stim_params) + '\nCommand:\n' + command_str
-    
+        output_ls = [
+            'Stim object\n\nLabel: ', self.label, '\nStim type: ',
+            self.stim_type, '\nTime range (ms): ', time_range,
+            '\nTime step (ms):', str(self.dt), '\nStim Parameters',
+            vars(self.stim_params), '\nCommand:\n', command_str
+            ]
+        
+        return ''.join(output_ls)
     
     # Pretty print self.command and some important details.
     # (Called by print().)
     def __str__(self):
         
-        header = self.stim_type + ' Stim object'
+        """
+        Return str(self).
+        """
         
         # Include more details about the object if it isn't empty.
-        if not self.command is None:
-            header += ' with ' + str( self.command.shape[1] ) + ' sweeps of ' + str( ( self.time[-1] + self.dt ) / 1000 ) + 's each.\n\n'
-            footer = 'Stim parameters are: '
-            for key, value in vars(self.stim_params).items():
-                footer += '\n\t' + str(key) + ': ' + str(value)
-            footer += '\n\n'
+        if self.command is not None:
+            
+            header = '{} Stim object with {} sweeps of {}s each.\n\n'.format(
+                self.stim_type,
+                self.command.shape[1],
+                (self.time[-1] + self.dt) * self.dt / 1000
+                )
+            
             content = np.array2string(self.command)
+            
+            footer_ls = ['Stim parameters are: ']
+            
+            for key, value in vars(self.stim_params).items():
+                keyval_str = '\n\t{}: {}'.format(key, value)
+                footer_ls.append(keyval_str)
+                
+            footer_ls.append('\n\n')
+            footer = ''.join(footer_ls)
         
         else:
+            
+            header = '{} Stim object.'.format(self.stim_type)
             content = ''
             footer = ''
         
-        return str(self.label) + '\n\n' + header + footer + content
+        output_ls = [str(self.label), '\n\n', header, footer, content]
+        
+        return ''.join(output_ls)
             
     
     
@@ -161,12 +188,14 @@ class Stim(object):
         self.time = np.arange(0, duration, self.dt)
         
         # Generate waveform based on time constants then normalize amplitude.
-        waveform = np.exp( -self.time / tau_decay ) - np.exp( -self.time / tau_rise )
+        waveform = np.exp(-self.time/tau_decay) - np.exp(-self.time/tau_rise)
         waveform /= np.max(waveform)
         waveform *= ampli
         
         # Convert waveform into a column vector.
-        waveform = np.concatenate( ( np.zeros( (int( offset / self.dt)) ), waveform ), axis = 0 )
+        waveform = np.concatenate(
+            (np.zeros((int(offset / self.dt))), waveform), axis = 0
+            )
         waveform = waveform[np.newaxis].T
         
         # Compute total charge transfer using the equation AUC = ampli * (tau_decay - tau_rise). (Derived from integrating PS equation from 0 to inf)
@@ -176,7 +205,10 @@ class Stim(object):
         self.time = np.arange(0, duration + offset, self.dt)
         self.command    = waveform
         self.stim_type  = "Post-synaptic current-like"
-        self.stim_params = types.SimpleNamespace(tau_rise = tau_rise, tau_decay = tau_decay, ampli = ampli, charge = charge)
+        self.stim_params = types.SimpleNamespace(
+            tau_rise = tau_rise, tau_decay = tau_decay,
+            ampli = ampli, charge = charge
+            )
         
 
     # Generate a synaptic current-like waveform with defined area under curve (total charge transfer)
@@ -199,7 +231,7 @@ class Stim(object):
         self.time = np.arange(0, duration, self.dt)
         
         # Generate waveform based on time constants
-        waveform = np.exp( -self.time / tau_decay ) - np.exp( -self.time / tau_rise )
+        waveform = np.exp(-self.time/tau_decay) - np.exp(-self.time/tau_rise)
         
         # Calculate ratio between desired and current charge and use to normalize waveform
         curr_charge = tau_decay - tau_rise
@@ -207,7 +239,9 @@ class Stim(object):
         waveform *= scalefactor_waveform
         
         # Convert waveform into a column vector.
-        waveform = np.concatenate( ( np.zeros( (int( offset / self.dt)) ), waveform ), axis = 0 )
+        waveform = np.concatenate(
+            (np.zeros((int(offset / self.dt))), waveform), axis = 0
+            )
         waveform = waveform[np.newaxis].T
         
         # Compute amplitude of PS based on charge sign       
@@ -220,7 +254,10 @@ class Stim(object):
         self.time = np.arange(0, duration + offset, self.dt)
         self.command    = waveform
         self.stim_type  = "Post-synaptic current-like"
-        self.stim_params = types.SimpleNamespace(tau_rise = tau_rise, tau_decay = tau_decay, ampli = ampli, charge = charge)
+        self.stim_params = types.SimpleNamespace(
+            tau_rise = tau_rise, tau_decay = tau_decay,
+            ampli = ampli, charge = charge
+            )
     
     
     # Realize OU noise and assign to self.command. (Wrapper for _gen_OU_internal.)
@@ -250,7 +287,7 @@ class Stim(object):
         # Initialize support vectors.
         self.time       = np.arange(0, duration, self.dt)
         self.command    = np.zeros(self.time.shape)
-        S               = sigma0 * ( 1 + dsigma * np.sin( (2 * np.pi / sin_per ) * self.time))
+        S               = sigma0 * (1 + dsigma * np.sin((2 * np.pi / sin_per) * self.time))
         rands           = np.random.standard_normal( len(self.time) )
         
         # Perform type conversions for vectors.
@@ -260,21 +297,17 @@ class Stim(object):
         rands.dtype             = np.float64
         
         # Perform type conversions for constants.
-        self.dt                 = np.float64( self.dt )
-        I0                      = np.float64( I0 )
-        tau                     = np.float64( tau )
-        bias_factor             = np.float64( bias_factor )
-        bias_point              = np.float64( bias_point )
+        self.dt                 = np.float64(self.dt)
+        I0                      = np.float64(I0)
+        tau                     = np.float64(tau)
+        bias_factor             = np.float64(bias_factor)
+        bias_point              = np.float64(bias_point)
         
         # Realize noise using nb.jit-accelerated function.
-        noise = self._gen_OU_internal(self.time, 
-                                      rands, 
-                                      self.dt, 
-                                      I0,
-                                      tau,
-                                      S,
-                                      bias_factor,
-                                      bias_point)
+        noise = self._gen_OU_internal(
+            self.time, rands, self.dt, I0,
+            tau, S, bias_factor, bias_point
+            )
         
         # Convert noise to a column vector.
         noise = noise[np.newaxis].T
@@ -282,7 +315,11 @@ class Stim(object):
         # Assign output.
         self.command    = noise
         self.stim_type  = 'Ornstein-Uhlenbeck noise'
-        self.stim_params = types.SimpleNamespace(I0 = I0, tau = tau, sigma0 = sigma0, dsigma = dsigma, sin_per = sin_per, bias_factor = bias_factor, bias_point = bias_point)
+        self.stim_params = types.SimpleNamespace(
+            I0 = I0, tau = tau, sigma0 = sigma0,
+            dsigma = dsigma, sin_per = sin_per,
+            bias_factor = bias_factor, bias_point = bias_point
+            )
         
     
     # Generate sinusoidal input
@@ -306,28 +343,28 @@ class Stim(object):
         # Convert ampli to a vector if need be;
         # otherwise check that it's the right shape.
         try:
-            tmp = iter(ampli); del tmp
+            tmp = iter(ampli); del tmp # Verify that ampli is iterable.
             assert len(ampli) == len(self.time)
             
         except TypeError:
-            ampli = np.array( [ampli] * len(self.time) )
+            ampli = np.array([ampli] * len(self.time))
             
         except AssertionError:
             raise ValueError('len of ampli must correspond to duration.')
         
         # Do the same with period.
         try:
-            tmp = iter(period); del tmp
+            tmp = iter(period); del tmp # Verify that period is iterable.
             assert len(period) == len(self.time)
         
         except TypeError:
-            period = np.array( [period] * len(self.time) )
+            period = np.array([period] * len(self.time))
             
         except AssertionError:
             raise ValueError('len of period must correspond to duration.')
         
         # Calculate the sine wave over time.
-        sinewave = I0 + ampli * np.sin( ( 2 * np.pi / period ) * self.time )
+        sinewave = I0 + ampli * np.sin((2 * np.pi / period) * self.time)
         
         # Convert sine wave to column vector.
         sinewave = sinewave[np.newaxis].T
@@ -335,7 +372,9 @@ class Stim(object):
         # Assign output.
         self.command    = sinewave
         self.stim_type  = 'Sine wave'
-        self.stim_params = types.SimpleNamespace(I0 = I0, ampli = ampli, period = period)
+        self.stim_params = types.SimpleNamespace(
+            I0 = I0, ampli = ampli, period = period
+            )
         
     
     # Set number of replicates of the command array.
@@ -347,7 +386,7 @@ class Stim(object):
         
         # Check that command has been initialized.
         try:
-            assert not ( self.command   is None )
+            assert self.command is not None
         except AssertionError:
             raise RuntimeError('No command array to replicate!')
         
@@ -371,7 +410,7 @@ class Stim(object):
         l_dk    = len(d_keys)
         
         plt.figure(figsize = (9, 3 + 3 * l_dk))
-        plt.suptitle( str(self.label) )
+        plt.suptitle(str(self.label))
         
         # Plot generated noise over time.
         plt.subplot(1 + l_dk, 1, 1)
@@ -408,30 +447,35 @@ class Stim(object):
         
         # Check whether there is any data to write.
         try:
-            assert not ( self.command   is None )
-            assert not ( self.time      is None )
+            assert self.command is not None
+            assert self.time is not None
         except AssertionError:
             raise RuntimeError('Command and time must both exist!')
         
         fname = self.label + '.ATF'
-        header = ''.join(['ATF1.0\n1\t{0}\nType=1\nTime (ms)\t'.format(self.command.shape[1]),
-                          *['Command (AU)\t' for sweep in range(self.command.shape[1])], '\n'])
         
+        header_ls = [
+            'ATF1.0\n1\t{}\nType=1\nTime (ms)\t'.format(self.command.shape[1]),
+            *['Command (AU)\t' for sweep in range(self.command.shape[1])],
+            '\n'
+            ]
+        header = ''.join(header_ls)
+                
         # Convert numeric arrays to strings.
-        str_command     = self.command.astype( np.unicode_ )
-        str_time        = self.time.astype( np.unicode_ )
+        str_command     = self.command.astype(np.unicode_)
+        str_time        = self.time.astype(np.unicode_)
         
         # Initialize list to hold arrays.
-        contentl = []
+        content_ls = []
         
         # Tab-delimit data one row (i.e., time step) at a time.
-        for t in range( len(str_time) ):
+        for t in range(len(str_time)):
             
-            tmp = str_time[t] + '\t' + '\t'.join( str_command[t, :] )
-            contentl.append(tmp)
+            tmp = str_time[t] + '\t' + '\t'.join(str_command[t, :])
+            content_ls.append(tmp)
         
         # Turn the content list into one long string.
-        content = '\n'.join(contentl)
+        content = '\n'.join(content_ls)
         
         # Write the header and content strings to the file.
         with open(fname, 'w') as f:
@@ -445,7 +489,14 @@ class Stim(object):
     
     # Fast internal method to realize OU noise. (Called by generate_OU.)
     @staticmethod
-    @nb.jit(nb.float64[:](nb.float64[:], nb.float64[:], nb.float64, nb.float64, nb.float64, nb.float64[:], nb.float64, nb.float64), nopython = True)
+    @nb.jit(
+        nb.float64[:](
+            nb.float64[:], nb.float64[:], nb.float64,
+            nb.float64, nb.float64, nb.float64[:],
+            nb.float64, nb.float64
+            ),
+        nopython = True
+        )
     def _gen_OU_internal(T, rands, dt, I0, tau, sigma, bias_factor, bias_point):
         
         I       = np.zeros(T.shape, dtype = np.float64)
@@ -453,9 +504,12 @@ class Stim(object):
         
         for t in range(1, len(T)):
             
-            adaptive_term = dt * ( ( I0 - I[t - 1] ) + bias_factor * np.exp(-(I[t - 1] - bias_point) / 5) )/ tau
-            random_term = np.sqrt( 2 * dt * sigma[t]**2 / tau ) * rands[t]
+            adaptive_term = (I0 - I[t - 1])
+            bias_term = bias_factor * np.exp(-(I[t - 1] - bias_point) / 5)
+            random_term = np.sqrt(2 * sigma[t]**2 * dt / tau) * rands[t]
             
-            I[t] = I[t - 1] + adaptive_term + random_term
+            dV = (adaptive_term + bias_term) * dt / tau + random_term
+            
+            I[t] = I[t - 1] + dV
         
         return I
