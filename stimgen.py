@@ -399,6 +399,23 @@ class Stim(object):
 
         """
         Simulate response of RC circuit to command.
+
+        Inputs:
+
+        R: float
+        --  Resistance of RC circuit in MOhm
+
+        C: float
+        --  Capacitance of RC circuit in pF
+
+        E: float
+        --  Equilibrium potential/reversal poential/resting potential of the cell in mV
+
+        plot: bool (default True)
+        --  Plot the integrated stimulation
+
+        verbose: bool (default True)
+        --  Print some helpful output. Set to False to run quietly.
         """
 
         input_ = self.command.copy() * 1e-12 # Convert pA to A
@@ -417,7 +434,21 @@ class Stim(object):
         if plot:
             if verbose: print('Plotting...')
             plt.figure()
-            plt.plot(V)
+
+            t_vec = np.arange(0, int(input_.shape[0] * self.dt), self.dt)
+
+            ax = plt.subplot(211)
+            plt.plot(t_vec, V, 'k-')
+            plt.ylabel('Voltage (mV)')
+            plt.xlabel('Time (ms)')
+
+            plt.subplot(212, sharex = ax)
+            plt.plot(t_vec, input_ * 1e12, 'k-')
+            plt.ylabel('Command (pA)')
+            plt.xlabel('Time (ms)')
+
+            plt.show()
+
             if verbose: print('Done!')
 
         return V
@@ -485,7 +516,7 @@ class Stim(object):
 
 
     # Write command and time to an ATF file.
-    def write_ATF(self):
+    def write_ATF(self, fname = None):
 
         """
         Write command and time to an ATF file in the current working directory.
@@ -498,7 +529,10 @@ class Stim(object):
         except AssertionError:
             raise RuntimeError('Command and time must both exist!')
 
-        fname = self.label + '.ATF'
+        if fname is None:
+            fname = self.label + '.ATF'
+        elif fname[-4:].upper() != '.ATF':
+            fname = fname + '.ATF'
 
         header_ls = [
             'ATF1.0\n1\t{}\nType=1\nTime (ms)\t'.format(self.command.shape[1]),
