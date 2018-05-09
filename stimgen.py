@@ -261,7 +261,7 @@ class Stim(object):
 
 
     # Realize OU noise and assign to self.command. (Wrapper for _gen_OU_internal.)
-    def generate_OU(self, duration, I0, tau, sigma0, dsigma, sin_per, bias_factor, bias_point):
+    def generate_OU(self, duration, I0, tau, sigma0, dsigma, sin_per):
 
         """
         Realize Ornstein-Uhlenbeck noise.
@@ -270,8 +270,6 @@ class Stim(object):
 
         sigma[t] = sigma0 * ( 1 + dsigma * sin(2pi * sin_freq)[t] )
 
-        Additionally, the noise distribution may be skewed according to an exponential function. Positive values of bias_factor produce an upwards skew, and zero eliminates skew.
-
         Inputs:
             duration        -- duration of noise to realize in ms.
             I0              -- mean value of the noise.
@@ -279,8 +277,6 @@ class Stim(object):
             sigma0          -- mean SD of the noise.
             dsigma          -- fractional permutation of noise SD.
             sin_per         -- period of the sinusoidal SD permutation in ms.
-            bias_factor     -- slope of the upward bias function.
-            bias_point      -- point at which the value of the bias function is 1.
         """
 
 
@@ -300,13 +296,11 @@ class Stim(object):
         self.dt                 = np.float64(self.dt)
         I0                      = np.float64(I0)
         tau                     = np.float64(tau)
-        bias_factor             = np.float64(bias_factor)
-        bias_point              = np.float64(bias_point)
 
         # Realize noise using nb.jit-accelerated function.
         noise = self._gen_OU_internal(
             self.time, rands, self.dt, I0,
-            tau, S, bias_factor, bias_point
+            tau, S
             )
 
         # Convert noise to a column vector.
@@ -317,8 +311,7 @@ class Stim(object):
         self.stim_type  = 'Ornstein-Uhlenbeck noise'
         self.stim_params = types.SimpleNamespace(
             I0 = I0, tau = tau, sigma0 = sigma0,
-            dsigma = dsigma, sin_per = sin_per,
-            bias_factor = bias_factor, bias_point = bias_point
+            dsigma = dsigma, sin_per = sin_per
             )
 
 
@@ -572,12 +565,11 @@ class Stim(object):
     @nb.jit(
         nb.float64[:](
             nb.float64[:], nb.float64[:], nb.float64,
-            nb.float64, nb.float64, nb.float64[:],
-            nb.float64, nb.float64
+            nb.float64, nb.float64, nb.float64[:]
             ),
         nopython = True
         )
-    def _gen_OU_internal(T, rands, dt, I0, tau, sigma, bias_factor, bias_point):
+    def _gen_OU_internal(T, rands, dt, I0, tau, sigma):
 
         I       = np.zeros(T.shape, dtype = np.float64)
         I[0]    = I0
@@ -585,10 +577,9 @@ class Stim(object):
         for t in range(1, len(T)):
 
             adaptive_term = (I0 - I[t - 1])
-            bias_term = bias_factor * np.exp(-(I[t - 1] - bias_point) / 5)
             random_term = np.sqrt(2 * sigma[t]**2 * dt / tau) * rands[t]
 
-            dV = (adaptive_term + bias_term) * dt / tau + random_term
+            dV = adaptive_term * dt / tau + random_term
 
             I[t] = I[t - 1] + dV
 

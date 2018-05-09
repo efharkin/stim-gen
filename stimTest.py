@@ -9,7 +9,7 @@ PS_stim = stimgen.Stim('synaptic waveform')
 PS_stim.generate_PS(100, 10, 1, 20)
 
 OU_stim = stimgen.Stim('OU noise')
-OU_stim.generate_OU(1000, 0, 1, 10, 0.5, 100, 0, 10)
+OU_stim.generate_OU(1000, 0, 1, 10, 0.5, 100)
 
 sin_stim = stimgen.Stim('sinewave')
 sin_stim.generate_sin(1000, 0, 10, 100)
